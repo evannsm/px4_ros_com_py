@@ -27,7 +27,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'offboard_control = px4_ros_com_py.offboard_control:main',
+            'offboard_control = px4_ros_com_py.run_node:main',
         ],
     },
 )
