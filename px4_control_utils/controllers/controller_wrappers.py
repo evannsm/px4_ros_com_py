@@ -73,7 +73,7 @@ class EnhancedNRController:
         """Compute control using enhanced Newton-Raphson method."""
 
         # Call the underlying function (enhanced version uses ref_dot)
-        u, cbf_term, enhanced_error_term, dgdu_inv, NR = newton_raphson_enhanced(
+        u, v, best_alpha, best_cost, new_rng = newton_raphson_enhanced(
             state,
             last_input,
             ref,
@@ -81,16 +81,18 @@ class EnhancedNRController:
             lookahead_step,
             integration_step,
             mass,
-            ref_dot
+            ref_dot,
+            last_alpha,
+            rng
         )
 
         # Normalize output
         return ControlOutput(
             control_input=u,
             metadata={
-                'cbf_term': cbf_term,
-                'enhanced_error_term': enhanced_error_term,
-                'dgdu_inv': dgdu_inv,
-                'NR': NR
+                'v': v,
+                'best_alpha': best_alpha,
+                'best_cost': best_cost,
+                'rng': new_rng
             }
         )

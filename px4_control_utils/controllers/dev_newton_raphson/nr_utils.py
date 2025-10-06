@@ -1,3 +1,4 @@
+import jax
 import jax.numpy as jnp
 from jax import jit, jacfwd, lax, jacrev, hessian
 
@@ -195,6 +196,40 @@ def get_tracking_error(ref, pred):
     err = ref - pred
     err = err.at[3].set(shortest_path_yaw_quaternion(pred[3], ref[3]))
     return err
+
+# --- Sampling related functions ---
+
+    
+# --- RNG-threaded sampling + local GD refinement ---
+def do_sampling(cost_fn,
+                last_alpha: jnp.ndarray,
+                rng: jax.Array,
+                *,
+                num_samples: int = 16,
+                noise_scale: float = 5.0,
+                lr: float = 1e-2):
+    """
+    Sample num_samples alphas around last_alpha, pick the best by cost,
+    then do one gradient step from that best. Returns (alpha_new, rng_out).
+    """
+    # Split once for next-call rng, once to create per-sample keys
+    rng_out, sub = jax.random.split(rng)
+    keys = jax.random.split(sub, num_samples)
+
+    def sample_and_evaluate(key):
+        noise = jax.random.normal(key, shape=last_alpha.shape) * noise_scale
+        alpha_sample = last_alpha + noise
+        cost = cost_fn(alpha_sample)
+        return alpha_sample, cost
+
+    samples, costs = jax.vmap(sample_and_evaluate)(keys)
+    best_idx = jnp.argmin(costs)
+    best_alpha = samples[best_idx]
+
+    # Local refinement
+    grad_alpha = jax.jacfwd(cost_fn)(best_alpha)
+    alpha_new = best_alpha - lr * grad_alpha
+    return alpha_new, rng_out
 
 
 # # --- Linearized prediction and related functions ---

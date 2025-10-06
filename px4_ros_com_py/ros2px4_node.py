@@ -117,6 +117,27 @@ GRAVITY: float = 9.806
 # ctx_hover = TrajContext(mode=6, sim=True, spin=False, double_speed=False)
 # ctx_traj = TrajContext(sim=True, spin=True, double_speed=False)
 
+# ============================================================================
+# Enum Mapping: Runtime Types -> Logging Message Enums
+# ============================================================================
+PLATFORM_TO_LOG = {
+    PlatformType.SIM: Logging.PLATFORM_SIM,
+    PlatformType.HARDWARE: Logging.PLATFORM_HARDWARE
+}
+
+CONTROLLER_TO_LOG = {
+    ControllerType.NR_STANDARD: Logging.CTRL_NR_STD,
+    ControllerType.NR_ENHANCED: Logging.CTRL_NR_ENHANCED
+}
+
+TRAJECTORY_TO_LOG = {
+    TrajectoryType.HOVER: Logging.TRAJ_HOVER,
+    TrajectoryType.CIRCLE_HORIZONTAL: Logging.TRAJ_CIRCLE_H,
+    TrajectoryType.CIRCLE_VERTICAL: Logging.TRAJ_CIRCLE_V,
+    TrajectoryType.FIG8_HORIZONTAL: Logging.TRAJ_FIG8_H,
+    TrajectoryType.FIG8_VERTICAL: Logging.TRAJ_FIG8_VT
+}
+
 class OffboardControl(Node):
     """ROS2 node for offboard control of PX4-based multirotor UAVs.
 
@@ -217,8 +238,9 @@ class OffboardControl(Node):
 
 
         # ----------------------- Initialize Control Manager --------------------------
+        self.T_LOOKAHEAD = 1.2
         ctrl_params = ControlParams(
-            t_lookahead=1.2,
+            t_lookahead=self.T_LOOKAHEAD,
             lookahead_step=0.05,
             integration_step=0.01,
             gravity=GRAVITY
@@ -269,7 +291,7 @@ class OffboardControl(Node):
         output = self.control_manager.compute_control(
             state=self._state0,
             ref=self._ref0,
-            ref_dot=None
+            ref_dot=self._ref0
         )
         output.control_input.block_until_ready()
         tf = time.time() - t0
@@ -280,7 +302,7 @@ class OffboardControl(Node):
         output = self.control_manager.compute_control(
             state=self._state0,
             ref=self._ref0,
-            ref_dot=None
+            ref_dot=self._ref0
         )
         output.control_input.block_until_ready()
         tf2 = time.time() - t0
@@ -299,13 +321,15 @@ class OffboardControl(Node):
 
         msg.timestamp = self.get_clock().now().nanoseconds // 1000  # microseconds
         msg.traj_time = self.trajectory_time
+        msg.comp_time = self.comp_time
+        msg.lookahead_time = self.T_LOOKAHEAD
 
-        msg.platform = str(self.platform_type)
-        msg.controller = str(self.controller_type)
-        msg.trajectory = str(self.trajectory_type)
+        # Automatically set enums based on runtime configuration
+        msg.platform = PLATFORM_TO_LOG[self.platform_type]
+        msg.controller = CONTROLLER_TO_LOG[self.controller_type]
+        msg.trajectory = TRAJECTORY_TO_LOG[self.trajectory_type]
         msg.traj_double = bool(self.double_speed)
         msg.traj_spin = bool(self.spin)
-        msg.traj_short = bool(self.short)
 
         # --- Pose and Derivatives ---
         msg.x = float(self._x)
@@ -496,9 +520,10 @@ class OffboardControl(Node):
         if not self.trajectory_started:
             self.trajectory_started = True
             self.control_manager.start_trajectory(time.time())
+            self.Traj_T0 = time.time()
 
         # Compute trajectory reference with lookahead
-        self.trajectory_time = time.time() - self.control_manager._start_time
+        self.trajectory_time = time.time() - self.Traj_T0
         lookahead_time = self.trajectory_time + self.control_manager.params.t_lookahead
         print(f"Trajectory Time: {self.trajectory_time:.2f} s, Lookahead: {lookahead_time:.2f} s")
 
@@ -515,16 +540,16 @@ class OffboardControl(Node):
             ref_dot=self.ref_dot
         )
         output.control_input.block_until_ready()  # Ensure all computations are done
-        ctrl_tf = time.time() - ctrl_t0
+        self.comp_time = time.time() - ctrl_t0
 
         # Log control output
         print(f"Control input: {output.control_input}")
         print(f"Metadata: {output.metadata}")
-        self.get_logger().info(f"Control computation time: {ctrl_tf:.4f} s, good for {1/ctrl_tf:.2f} Hz")
+        self.get_logger().info(f"Control computation time: {self.comp_time:.4f} s, good for {1/self.comp_time:.2f} Hz")
 
         # Convert control input to throttle and rates
-        new_force = output.control_input[0]
-        new_throttle = float(self.platform.get_throttle_from_force(float(new_force)))
+        new_force = float(output.control_input[0])
+        new_throttle = float(self.platform.get_throttle_from_force(new_force))
         new_roll_rate = float(output.control_input[1])
         new_pitch_rate = float(output.control_input[2])
         new_yaw_rate = float(output.control_input[3])

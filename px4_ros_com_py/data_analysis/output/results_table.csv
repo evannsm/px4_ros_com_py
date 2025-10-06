@@ -1,0 +1,3 @@
+Platform,Controller,Trajectory,Modifiers,Position_RMSE_m,Comp_Time_ms
+Simulation,NR Standard,Circle H,2x+spin,,0.9179411275167785
+Simulation,NR Standard,Circle H,2x+spin,,0.3266277197231834
