@@ -13,7 +13,7 @@ from px4_control_utils.controllers.dev_newton_raphson.nr_utils import(
 
 ALPHA = jnp.array([20.0, 30.0, 30.0, 30.0])
 USE_CBF: bool = True
-USE_SAMPLING: bool = True
+USE_SAMPLING: bool = False
 
 
 @jit

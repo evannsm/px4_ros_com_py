@@ -210,9 +210,9 @@ def detect_trajectory_plane(df: pd.DataFrame, threshold: float = 0.1) -> str:
     return plane
 
 
-def trim_trailing_all_nan(X: np.ndarray) -> np.ndarray:
+def trim_trailing_and_leading_all_nan(X: np.ndarray) -> np.ndarray:
     """
-    Remove trailing rows that are all NaN.
+    Remove trailing and leading rows that are all NaN.
 
     Parameters:
     -----------
@@ -230,7 +230,10 @@ def trim_trailing_all_nan(X: np.ndarray) -> np.ndarray:
     if not keep.any():
         return X[:0]
     last_valid = np.max(np.where(keep))
-    return X[:last_valid+1]
+
+    first_valid = np.min(np.where(keep))
+    return X[first_valid:last_valid+1]
+
 
 
 def align_reference_to_actual(df: pd.DataFrame, sampling_rate: float = 10.0) -> pd.DataFrame:
@@ -317,8 +320,8 @@ def get_flat_output_and_desired(df: pd.DataFrame, flip_z: bool = True, align_loo
     actual_values = df[['x', 'y', 'z', angle_col]].to_numpy()
     reference_values = df[['x_ref', 'y_ref', 'z_ref', angle_ref_col]].to_numpy()
 
-    actual_values_clean = trim_trailing_all_nan(actual_values)
-    reference_values_clean = trim_trailing_all_nan(reference_values)
+    actual_values_clean = trim_trailing_and_leading_all_nan(actual_values)
+    reference_values_clean = trim_trailing_and_leading_all_nan(reference_values)
 
     n = min(len(actual_values_clean), len(reference_values_clean))
     actual_values_clean = actual_values_clean[:n]
@@ -329,6 +332,7 @@ def get_flat_output_and_desired(df: pd.DataFrame, flip_z: bool = True, align_loo
         actual_values_clean[:, 2] *= -1
         reference_values_clean[:, 2] *= -1
 
+    # print(f"{actual_values_clean=}, {reference_values_clean=}")
     return actual_values_clean, reference_values_clean
 
 
@@ -374,6 +378,8 @@ def calculate_overall_rmse(df: pd.DataFrame, flip_z: bool = True) -> float:
         The overall RMSE across all dimensions
     """
     actual_values, reference_values = get_flat_output_and_desired(df, flip_z=flip_z)
+    # print(f"{actual_values=}, {reference_values=}")
+
     return calculate_rmse(actual_values, reference_values)
 
 

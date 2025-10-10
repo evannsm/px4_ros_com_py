@@ -8,7 +8,7 @@ from px4_control_utils.controllers.dev_newton_raphson.nr_utils import do_samplin
 
 ALPHA = jnp.array([20.0, 30.0, 30.0, 30.0])
 USE_CBF: bool = True
-USE_SAMPLING: bool = True
+USE_SAMPLING: bool = False
 
 # @jit
 # def newton_raphson_standard(state, last_input, reference, lookahead_horizon_s, lookahead_stage_dt, integration_dt, mass):

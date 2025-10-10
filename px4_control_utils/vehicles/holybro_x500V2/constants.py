@@ -1,1 +1,1 @@
-MASS: float = 2.0 # (kg) mass of the multirotor
+MASS: float = 1.75 # (kg) mass of the multirotor

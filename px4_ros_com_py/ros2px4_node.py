@@ -226,7 +226,11 @@ class OffboardControl(Node):
         self.mocap_initialized: bool = False
         self.full_state_available: bool = False
         self.vehicle_full_state_subscriber = self.create_subscription( #subscribes to odometry data (position, velocity, attitude)
-            FullState, '/merge_odom_localpos/full_state_relay', self.vehicle_full_state_callback, qos_profile)        
+            FullState, '/merge_odom_localpos/full_state_relay', self.vehicle_full_state_callback, qos_profile) 
+
+        self.in_offboard_mode: bool = False       
+        self.armed: bool = False
+        self.in_land_mode: bool = False
         self.vehicle_status_subscriber = self.create_subscription(
             VehicleStatus, '/fmu/out/vehicle_status', self.vehicle_status_callback, qos_profile)
 
