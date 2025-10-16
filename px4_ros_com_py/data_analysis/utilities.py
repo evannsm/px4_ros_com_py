@@ -382,7 +382,7 @@ def calculate_rmse(actual: np.ndarray, reference: np.ndarray) -> float:
     return np.sqrt(mse)
 
 
-def calculate_overall_rmse(df: pd.DataFrame, flip_z: bool = True) -> float:
+def calculate_overall_rmse(df: pd.DataFrame, flip_z: bool = True, align_lookahead: bool = True, sampling_rate: float = 10.0) -> float:
     """
     Calculate the overall RMSE across x, y, z, and yaw compared to their reference values.
 
@@ -392,19 +392,23 @@ def calculate_overall_rmse(df: pd.DataFrame, flip_z: bool = True) -> float:
         DataFrame containing the actual values and reference values
     flip_z : bool
         Whether to flip the z-axis
+    align_lookahead : bool
+        Whether to align reference values to account for lookahead_time (default: True)
+    sampling_rate : float
+        Data sampling rate in Hz (default: 10.0 Hz), used for alignment
 
     Returns:
     --------
     float
         The overall RMSE across all dimensions
     """
-    actual_values, reference_values = get_flat_output_and_desired(df, flip_z=flip_z)
+    actual_values, reference_values = get_flat_output_and_desired(df, flip_z=flip_z, align_lookahead=align_lookahead, sampling_rate=sampling_rate)
     # print(f"{actual_values=}, {reference_values=}")
 
     return calculate_rmse(actual_values, reference_values)
 
 
-def calculate_position_rmse(df: pd.DataFrame, flip_z: bool = True) -> float:
+def calculate_position_rmse(df: pd.DataFrame, flip_z: bool = True, align_lookahead: bool = True, sampling_rate: float = 10.0) -> float:
     """
     Calculate RMSE for position only (x, y, z).
 
@@ -414,17 +418,21 @@ def calculate_position_rmse(df: pd.DataFrame, flip_z: bool = True) -> float:
         DataFrame containing position data
     flip_z : bool
         Whether to flip the z-axis
+    align_lookahead : bool
+        Whether to align reference values to account for lookahead_time (default: True)
+    sampling_rate : float
+        Data sampling rate in Hz (default: 10.0 Hz), used for alignment
 
     Returns:
     --------
     float
         Position RMSE
     """
-    actual_values, reference_values = get_flat_output_and_desired(df, flip_z=flip_z)
+    actual_values, reference_values = get_flat_output_and_desired(df, flip_z=flip_z, align_lookahead=align_lookahead, sampling_rate=sampling_rate)
     return calculate_rmse(actual_values[:, :3], reference_values[:, :3])
 
 
-def calculate_rmse_per_axis(df: pd.DataFrame, flip_z: bool = True) -> Dict[str, float]:
+def calculate_rmse_per_axis(df: pd.DataFrame, flip_z: bool = True, align_lookahead: bool = True, sampling_rate: float = 10.0) -> Dict[str, float]:
     """
     Calculate RMSE for each axis separately.
 
@@ -434,13 +442,17 @@ def calculate_rmse_per_axis(df: pd.DataFrame, flip_z: bool = True) -> Dict[str, 
         DataFrame containing trajectory data
     flip_z : bool
         Whether to flip the z-axis
+    align_lookahead : bool
+        Whether to align reference values to account for lookahead_time (default: True)
+    sampling_rate : float
+        Data sampling rate in Hz (default: 10.0 Hz), used for alignment
 
     Returns:
     --------
     dict
         Dictionary with RMSE values for each axis
     """
-    actual_values, reference_values = get_flat_output_and_desired(df, flip_z=flip_z)
+    actual_values, reference_values = get_flat_output_and_desired(df, flip_z=flip_z, align_lookahead=align_lookahead, sampling_rate=sampling_rate)
 
     return {
         'x': np.sqrt(np.mean((actual_values[:, 0] - reference_values[:, 0]) ** 2)),
