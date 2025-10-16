@@ -14,7 +14,7 @@ def hover(t_traj: float, ctx: TrajContext):
     """Returns constant hover reference trajectories at a few positions."""
     mode = ctx.hover_mode
     sim = ctx.sim
-
+    
     hover_dict: Dict[int, jnp.ndarray] = {
         1: jnp.array([0.0, 0.0, -0.9, 0.0]),
         2: jnp.array([0.0, 0.8, -0.8, 0.0]),

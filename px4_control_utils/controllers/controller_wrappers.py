@@ -31,7 +31,7 @@ class StandardNRController:
         """Compute control using standard Newton-Raphson method."""
 
         # Call the underlying function
-        u, v, best_alpha, best_cost, new_rng = newton_raphson_standard(
+        u, v  = newton_raphson_standard(
             state,
             last_input,
             ref,
@@ -48,9 +48,6 @@ class StandardNRController:
             control_input=u,
             metadata={
                 'v': v,
-                'best_alpha': best_alpha,
-                'best_cost': best_cost,
-                'rng': new_rng
             }
         )
 
@@ -74,7 +71,7 @@ class EnhancedNRController:
         """Compute control using enhanced Newton-Raphson method."""
 
         # Call the underlying function (enhanced version uses ref_dot)
-        u, v, best_alpha, best_cost, new_rng = newton_raphson_enhanced(
+        u, v  = newton_raphson_enhanced(
             state,
             last_input,
             ref,
@@ -92,8 +89,5 @@ class EnhancedNRController:
             control_input=u,
             metadata={
                 'v': v,
-                'best_alpha': best_alpha,
-                'best_cost': best_cost,
-                'rng': new_rng
             }
         )

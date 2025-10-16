@@ -38,5 +38,5 @@ def newton_raphson_enhanced(state,
     udot = NR + v if USE_CBF else NR + jnp.zeros_like(NR)
     change_u = udot * integration_dt
     u = last_input + change_u
-    dummy_cost = jnp.array(0.0)
-    return u, v, ALPHA, dummy_cost, rng
+    # dummy_cost = jnp.array(0.0)
+    return u, v#, ALPHA, dummy_cost, rng

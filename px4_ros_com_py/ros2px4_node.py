@@ -111,6 +111,7 @@ from px4_control_utils.px4_utils.flight_phase_manager import (
     FlightPhaseConfig
 )
 from px4_control_utils.control_manager import ControlManager, ControlParams
+from Logger import LogType, VectorLogType, Logger # pyright: ignore[reportMissingImports, reportAttributeAccessIssue]
 
 GRAVITY: float = 9.806
 
@@ -189,7 +190,7 @@ class OffboardControl(Node):
 
 
         self.ctx_hover = TrajContext(sim=self.sim, hover_mode=self.hover_mode)
-        self.ctx_traj = TrajContext(sim=self.sim, spin=self.spin, double_speed=self.double_speed, short=self.short)
+        self.ctx_traj = TrajContext(sim=self.sim, hover_mode=self.hover_mode, spin=self.spin, double_speed=self.double_speed, short=self.short)
 
         # ----------------------- Initialize Flight Phase Manager --------------------------
         flight_config = FlightPhaseConfig(hover_period=15.0, flight_period=30.0)
@@ -279,9 +280,57 @@ class OffboardControl(Node):
         self.first_log = True
         if self.first_log:
             self.first_log = False
-            msg = Logging()
-            # msg.timestamp = self.get_clock().now().nanoseconds // 1000  # micro
-            self.log_publisher.publish(msg)
+            self.get_logger().info("Starting data logging.")
+            self.platform_logtype = LogType("platform", 0)
+            self.controller_logtype = LogType("controller", 1)
+            self.trajectory_logtype = LogType("trajectory", 2)
+            self.traj_double_logtype = LogType("traj_double", 3)
+            self.traj_spin_logtype = LogType("traj_spin", 4)
+
+            self.platform_logtype.append(self.platform_type)
+            self.controller_logtype.append(self.controller_type)
+            self.trajectory_logtype.append(self.trajectory_type)
+            self.traj_double_logtype.append("DblSpd" if self.double_speed else "NormSpd")
+            self.traj_spin_logtype.append("Spin" if self.spin else "NoSpin")
+
+
+        self.time_logtype = LogType("time", 0)
+        self.trajtime_logtype = LogType("traj_time", 1)
+        self.lookahead_time_logtype = LogType("lookahead_time", 2)
+        self.comptime_logtype = LogType("comp_time", 3)
+
+        # State logs
+        self.x_logtype = LogType("x", 4)
+        self.y_logtype = LogType("y", 5)
+        self.z_logtype = LogType("z", 6)
+        self.yaw_logtype = LogType("yaw", 7)
+        self.vx_logtype = LogType("vx", 8)
+        self.vy_logtype = LogType("vy", 9)
+        self.vz_logtype = LogType("vz", 10)
+
+        # Reference logs
+        self.xref_logtype = LogType("x_ref", 11)
+        self.yref_logtype = LogType("y_ref", 12)
+        self.zref_logtype = LogType("z_ref", 13)
+        self.yawref_logtype = LogType("yaw_ref", 14)
+        self.vxref_logtype = LogType("vx_ref", 15)
+        self.vyref_logtype = LogType("vy_ref", 16)
+        self.vzref_logtype = LogType("vz_ref", 17)
+
+        # Angular velocity logs
+        self.p_logtype = LogType("p", 18)
+        self.q_logtype = LogType("q", 19)
+        self.r_logtype = LogType("r", 20)
+
+        # Control input logs (normalized)
+        self.throttle_input_logtype = LogType("throttle_input", 21)
+        self.p_input_logtype = LogType("p_input", 22)
+        self.q_input_logtype = LogType("q_input", 23)
+        self.r_input_logtype = LogType("r_input", 24)
+
+        self.cbf_logtype = VectorLogType("cbf", 25, ["v_throttle", "v_p", "v_q", "v_r"])
+
+        
         self.data_log_timer = self.create_timer(self.data_log_timer_period, self.data_log_timer_callback)
 
 
@@ -319,6 +368,45 @@ class OffboardControl(Node):
         time.sleep(3)
 
     def data_log_timer_callback(self) -> None:
+        """Callback function for the data logging timer."""
+        if self.flight_phase is not FlightPhase.CUSTOM:
+            return
+        
+        self.time_logtype.append(time.time() - self.T0 - self.phase_manager.config.hover_period)  # Adjust time to start from 0 after hover
+        self.trajtime_logtype.append(self.trajectory_time)
+        self.lookahead_time_logtype.append(self.T_LOOKAHEAD)
+        self.comptime_logtype.append(self.comp_time)
+
+        self.x_logtype.append(self._x)
+        self.y_logtype.append(self._y)
+        self.z_logtype.append(self._z)
+        self.yaw_logtype.append(self._yaw)
+        self.vx_logtype.append(self._vx)
+        self.vy_logtype.append(self._vy)
+        self.vz_logtype.append(self._vz)
+
+        self.xref_logtype.append(self.ref[0])
+        self.yref_logtype.append(self.ref[1])
+        self.zref_logtype.append(self.ref[2])
+        self.yawref_logtype.append(self.ref[3])
+        self.vxref_logtype.append(self.ref_dot[0])
+        self.vyref_logtype.append(self.ref_dot[1])
+        self.vzref_logtype.append(self.ref_dot[2])
+
+        self.p_logtype.append(self._angular_velocity[0])
+        self.q_logtype.append(self._angular_velocity[1])
+        self.r_logtype.append(self._angular_velocity[2])
+
+        self.throttle_input_logtype.append(self.normalized_input[0])
+        self.p_input_logtype.append(self.normalized_input[1])
+        self.q_input_logtype.append(self.normalized_input[2])
+        self.r_input_logtype.append(self.normalized_input[3])
+
+        self.cbf_logtype.append(*self.cbf_value)
+
+
+
+    def data_log_timer_callback_juggler(self) -> None:
         if self.flight_phase is not FlightPhase.CUSTOM:
             return
         msg = Logging()
@@ -374,6 +462,7 @@ class OffboardControl(Node):
         msg.u_q = float(self.normalized_input[2])
         msg.u_r = float(self.normalized_input[3])
 
+
         # --- Publish ---
         self.log_publisher.publish(msg)
 
@@ -383,7 +472,7 @@ class OffboardControl(Node):
             self.full_state_available = True
         self._x = msg.position[0]
         self._y = msg.position[1]
-        self._z = (msg.position[2] + 0.5) if (self.sim and (abs(msg.position[2]) < 1.2)) else msg.position[2]  # Adjust for sim ground level if needed
+        self._z = msg.position[2]#(msg.position[2] + 0.5) if (self.sim and (abs(msg.position[2]) < 1.2)) else msg.position[2]  # Adjust for sim ground level if needed
 
         self._vx = msg.velocity[0]
         self._vy = msg.velocity[1]
@@ -549,6 +638,7 @@ class OffboardControl(Node):
         # Log control output
         print(f"Control input: {output.control_input}")
         print(f"Metadata: {output.metadata}")
+        self.cbf_value = output.metadata['v']
         self.get_logger().info(f"Control computation time: {self.comp_time:.4f} s, good for {1/self.comp_time:.2f} Hz")
 
         # Convert control input to throttle and rates

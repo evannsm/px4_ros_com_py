@@ -86,18 +86,30 @@ def extract_metadata_from_data(df: pd.DataFrame) -> Dict[str, str]:
 
     # Extract platform
     if 'platform' in df.columns:
-        platform_val = int(df['platform'].mode()[0])  # Most common value
-        metadata['platform'] = PLATFORM_NAMES.get(platform_val, f'Platform {platform_val}')
+        platform_val = df['platform'].mode()[0]  # Most common value
+        if isinstance(platform_val, str):
+            metadata['platform'] = platform_val
+        else:
+            platform_val = int(platform_val)
+            metadata['platform'] = PLATFORM_NAMES.get(platform_val, f'Platform {platform_val}')
 
     # Extract controller
     if 'controller' in df.columns:
-        controller_val = int(df['controller'].mode()[0])  # Most common value
-        metadata['controller'] = CONTROLLER_NAMES.get(controller_val, f'Controller {controller_val}')
+        controller_val = df['controller'].mode()[0]  # Most common value
+        if isinstance(controller_val, str):
+            metadata['controller'] = controller_val
+        else:
+            controller_val = int(controller_val)
+            metadata['controller'] = CONTROLLER_NAMES.get(controller_val, f'Controller {controller_val}')
 
     # Extract trajectory
     if 'trajectory' in df.columns:
-        trajectory_val = int(df['trajectory'].mode()[0])  # Most common value
-        metadata['trajectory'] = TRAJECTORY_NAMES.get(trajectory_val, f'Trajectory {trajectory_val}')
+        trajectory_val = df['trajectory'].mode()[0]  # Most common value
+        if isinstance(trajectory_val, str):
+            metadata['trajectory'] = trajectory_val
+        else:
+            trajectory_val = int(trajectory_val)
+            metadata['trajectory'] = TRAJECTORY_NAMES.get(trajectory_val, f'Trajectory {trajectory_val}')
 
     # Extract trajectory modifiers
     if 'traj_double' in df.columns:
@@ -344,19 +356,28 @@ def calculate_rmse(actual: np.ndarray, reference: np.ndarray) -> float:
     """
     Calculate Root Mean Squared Error between actual and reference trajectories.
 
+    For position (x, y, z), uses direct error.
+    For yaw (4th column if present), applies weight of 0.18.
+
     Parameters:
     -----------
     actual : np.ndarray
-        Actual values
+        Actual values with shape (n, 3) for [x,y,z] or (n, 4) for [x,y,z,yaw]
     reference : np.ndarray
-        Reference values
+        Reference values with same shape as actual
 
     Returns:
     --------
     float
         RMSE value
     """
-    squared_errors = (actual - reference) ** 2
+    errors = actual - reference
+
+    # If we have yaw component (4th column), apply weight of 0.18
+    if errors.shape[1] >= 4:
+        errors[:, 3] = 0.18 * errors[:, 3]
+
+    squared_errors = errors ** 2
     mse = np.mean(np.sum(squared_errors, axis=1))
     return np.sqrt(mse)
 
