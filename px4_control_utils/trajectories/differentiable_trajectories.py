@@ -9,7 +9,6 @@ SIM_HEIGHT = 5.0
 HARDWARE_HEIGHT = 0.85
 
 
-
 @jit(static_argnames=("ctx",))
 def hover(t_traj: float, ctx: TrajContext):
     """Returns constant hover reference trajectories at a few positions."""
@@ -35,6 +34,28 @@ def hover(t_traj: float, ctx: TrajContext):
         raise RuntimeError("hover modes 5+ not available for hardware")
 
     return hover_dict[mode], jnp.zeros(4)
+
+@jit
+def yawing_only(t_traj: float, ctx: TrajContext) -> tuple[jnp.ndarray, jnp.ndarray]:
+    """Returns stationary yawing reference trajectory."""
+    height = HARDWARE_HEIGHT if not ctx.sim else SIM_HEIGHT
+    spin_period = 20.0
+
+    if ctx.double_speed:
+        spin_period /= 2.0
+
+    def get_trajectory(t: float) -> jnp.ndarray:
+        x = 0.0
+        y = 0.0
+        z = -height
+        yaw = t / (spin_period / (2 * jnp.pi))
+        return jnp.array([x, y, z, yaw], dtype=jnp.float64)
+
+    pos = get_trajectory(t_traj)
+    vel = jacfwd(get_trajectory)(t_traj)
+
+    return pos, vel
+
 
 
 @jit(static_argnames=("ctx",))
@@ -188,28 +209,6 @@ def helix(t_traj: float, ctx: TrajContext) -> tuple[jnp.ndarray, jnp.ndarray]:
         yaw = omega_spin * t
 
         return jnp.array([x, y, -z, yaw], dtype=jnp.float64)
-
-    pos = get_trajectory(t_traj)
-    vel = jacfwd(get_trajectory)(t_traj)
-
-    return pos, vel
-
-
-@jit
-def yawing_only(t_traj: float, ctx: TrajContext) -> tuple[jnp.ndarray, jnp.ndarray]:
-    """Returns stationary yawing reference trajectory."""
-    height = HARDWARE_HEIGHT if not ctx.sim else SIM_HEIGHT
-    spin_period = 20.0
-
-    if ctx.double_speed:
-        spin_period /= 2.0
-
-    def get_trajectory(t: float) -> jnp.ndarray:
-        x = 0.0
-        y = 0.0
-        z = -height
-        yaw = t / (spin_period / (2 * jnp.pi))
-        return jnp.array([x, y, z, yaw], dtype=jnp.float64)
 
     pos = get_trajectory(t_traj)
     vel = jacfwd(get_trajectory)(t_traj)

@@ -1,9 +1,13 @@
 from .differentiable_trajectories import (
     hover,
+    yawing_only,
     circle_horizontal,
     circle_vertical,
     fig8_horizontal,
-    fig8_vertical
+    fig8_vertical,
+    helix,
+    sawtooth,
+    triangle,
 )
 
 # from .nondifferentiable_trajectories import hover
