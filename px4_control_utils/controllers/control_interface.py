@@ -47,7 +47,7 @@ Example Usage:
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Dict, Callable, Protocol, Any, Optional
+from typing import Dict, Callable, Protocol, Any, Optional, Union
 import jax.numpy as jnp
 import numpy as np
 
@@ -56,6 +56,7 @@ from .dev_newton_raphson import (
     newton_raphson_enhanced
 )
 
+Array = Union[np.ndarray, jnp.ndarray]  # what the protocol accepts
 
 @dataclass
 class ControlOutput:
@@ -130,15 +131,15 @@ class ControllerInterface(Protocol):
 
     def compute_control(
         self,
-        state: np.ndarray,
-        last_input: jnp.ndarray,
-        ref: np.ndarray,
-        ref_dot: Optional[np.ndarray],
+        state: Array,
+        last_input: Array,
+        ref: Array,
+        ref_dot: Array | None,
         t_lookahead: float,
         lookahead_step: float,
         integration_step: float,
         mass: float,
-        last_alpha: Optional[jnp.ndarray] = None,
+        last_alpha: Array | None = None,
         rng: Optional[Any] = None
     ) -> ControlOutput:
         """Compute control input given current state and reference.
@@ -237,10 +238,11 @@ from .controller_wrappers import StandardNRController, EnhancedNRController
 
 
 # Controller registry maps types to instantiated controllers
-CTRL_REGISTRY: Dict[str, ControllerInterface] = {
+CTRL_REGISTRY: dict[ControllerType, ControllerInterface] = {
     ControllerType.NR_STANDARD: StandardNRController(),
-    ControllerType.NR_ENHANCED: EnhancedNRController()
+    ControllerType.NR_ENHANCED: EnhancedNRController(),
 }
+
 """
 Controller Registry - Dependency Injection Container
 ===================================================

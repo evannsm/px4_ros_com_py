@@ -1,6 +1,6 @@
 """Wrapper classes for controllers to implement ControllerInterface."""
 
-from typing import Optional, Any
+from typing import Optional, Any, Union
 import numpy as np
 import jax.numpy as jnp
 
@@ -9,6 +9,7 @@ from .dev_newton_raphson import (
     newton_raphson_standard,
     newton_raphson_enhanced
 )
+Array = Union[np.ndarray, jnp.ndarray]  # what the protocol accepts
 
 
 class StandardNRController:
@@ -16,15 +17,15 @@ class StandardNRController:
 
     def compute_control(
         self,
-        state: np.ndarray,
-        last_input: jnp.ndarray,
-        ref: np.ndarray,
-        ref_dot: Optional[np.ndarray],
+        state: Array,
+        last_input: Array,
+        ref: Array,
+        ref_dot: Array | None,
         t_lookahead: float,
         lookahead_step: float,
         integration_step: float,
         mass: float,
-        last_alpha: Optional[jnp.ndarray] = None,
+        last_alpha: Array | None = None,
         rng: Optional[Any] = None
     ) -> ControlOutput:
         """Compute control using standard Newton-Raphson method."""
@@ -59,15 +60,15 @@ class EnhancedNRController:
 
     def compute_control(
         self,
-        state: np.ndarray,
-        last_input: jnp.ndarray,
-        ref: np.ndarray,
-        ref_dot: Optional[np.ndarray],
+        state: Array,
+        last_input: Array,
+        ref: Array,
+        ref_dot: Array | None,
         t_lookahead: float,
         lookahead_step: float,
         integration_step: float,
         mass: float,
-        last_alpha: Optional[jnp.ndarray] = None,
+        last_alpha: Array | None = None,
         rng: Optional[Any] = None
     ) -> ControlOutput:
         """Compute control using enhanced Newton-Raphson method."""

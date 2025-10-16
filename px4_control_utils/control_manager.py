@@ -65,11 +65,13 @@ from px4_control_utils.controllers.control_interface import (
 from px4_control_utils.trajectories.trajectory_interface import (
     TrajectoryFunc,
     TrajectoryType,
-    TRAJ_FUNC_REGISTRY
+    TRAJ_FUNC_REGISTRY,
+    TrajReturn
 )
 from px4_control_utils.trajectories.trajectory_context import TrajContext
 from px4_control_utils.vehicles.platform_interface import PlatformConfig
 
+Array = np.ndarray | jnp.ndarray  # what the protocol accepts
 
 @dataclass
 class ControlParams:
@@ -156,7 +158,7 @@ class ControlManager:
         trajectory_type: TrajectoryType,
         platform: PlatformConfig,
         traj_context: TrajContext,
-        params: ControlParams = None
+        params: ControlParams = None # type: ignore
     ):
         """Initialize the control manager.
 
@@ -240,7 +242,7 @@ class ControlManager:
         """
         return self._start_time
 
-    def compute_reference(self, lookahead_time: float) -> tuple:
+    def compute_reference(self, lookahead_time: float) -> Array | TrajReturn:
         """Compute reference trajectory at given time.
 
         Calls the selected trajectory function with appropriate context
@@ -267,9 +269,9 @@ class ControlManager:
 
     def compute_control(
         self,
-        state: np.ndarray,
-        ref: np.ndarray,
-        ref_dot: Optional[np.ndarray] = None
+        state: np.ndarray | jnp.ndarray,
+        ref: np.ndarray | jnp.ndarray,
+        ref_dot: Optional[np.ndarray | jnp.ndarray] = None
     ) -> ControlOutput:
         """Compute control input using the selected controller.
 
